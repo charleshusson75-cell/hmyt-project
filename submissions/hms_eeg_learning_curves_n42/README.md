@@ -5,7 +5,7 @@
   network, so the title changed.
 - **Team:** N42, one member (student ID 20260147S)
 - **Main models:** planned: mean-vote baseline, LightGBM, a tabular foundation model, a 1D CNN
-- **Key result:** none at this stage (proposal)
+- **Key result:** none at this stage (data analysis)
 
 ## Question
 
@@ -31,6 +31,7 @@ the weekly reports went on the class Drive (copies of weeks 4 to 7 in `slides/`)
 ## Folder
 
 - `report/`: Lab 1 report (`N42_Lab1_Report.docx`), literature matrix (`literature_matrix.md`, also as `.xlsx`), `references.bib`
+- `src/eda/`: EDA notebook and the data module it used (with outputs on Kaggle: https://www.kaggle.com/code/charleshusson/hms-eda-ipynb)
 - `slides/`: weekly reports
 - `docs/ai_disclosure_log.md`: how AI tools were used
 
@@ -42,4 +43,5 @@ sign in to Kaggle and accept the rules to get it. 106,800 labelled windows, 17,0
 
 ## How to run (reproducibility)
 
-Nothing to run at this stage: `gd2-dataset-eda` adds the EDA notebook.
+EDA notebook on Kaggle, with its outputs: https://www.kaggle.com/code/charleshusson/hms-eda-ipynb.
+To run a copy: attach the competition and a dataset holding `src/eda/hms_data.py`, then run `src/eda/hms_eda.ipynb` on CPU.
