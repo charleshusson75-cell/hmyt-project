@@ -4,8 +4,8 @@
   project list, under its old working title "ECG DNN adapted to EEG study". The study no longer adapts an ECG
   network, so the title changed.
 - **Team:** N42, one member (student ID 20260147S)
-- **Main models:** planned: mean-vote baseline, LightGBM, a tabular foundation model, a 1D CNN
-- **Key result:** none at this stage (data analysis)
+- **Main models:** mean-vote baseline and LightGBM (baselines), TabPFN, MiniRocket, 1D CNN (results in `gd4-baseline-model`)
+- **Key result:** patient-disjoint split checked by `assert`; results in `gd4-baseline-model`
 
 ## Question
 
@@ -30,8 +30,9 @@ the weekly reports went on the class Drive (copies of weeks 4 to 7 in `slides/`)
 
 ## Folder
 
-- `report/`: Lab 1 report (`N42_Lab1_Report.docx`), literature matrix (`literature_matrix.md`, also as `.xlsx`), `references.bib`
+- `report/`: Lab 1 report (`N42_Lab1_Report.docx`), literature matrix (`literature_matrix.md`, also as `.xlsx`), `references.bib`, Milestone 2 report (`M2_preprocessing_and_baselines.md`)
 - `src/eda/`: EDA notebook and the data module it used (with outputs on Kaggle: https://www.kaggle.com/code/charleshusson/hms-eda-ipynb)
+- `src/`: data preparation and split (`hms_data.py`, `prepare.py`)
 - `slides/`: weekly reports
 - `docs/ai_disclosure_log.md`: how AI tools were used
 
@@ -43,5 +44,9 @@ sign in to Kaggle and accept the rules to get it. 106,800 labelled windows, 17,0
 
 ## How to run (reproducibility)
 
-EDA notebook on Kaggle, with its outputs: https://www.kaggle.com/code/charleshusson/hms-eda-ipynb.
-To run a copy: attach the competition and a dataset holding `src/eda/hms_data.py`, then run `src/eda/hms_eda.ipynb` on CPU.
+```bash
+pip install -r requirements.txt
+python src/prepare.py --comp <folder of the HMS competition> --out prepared
+```
+
+`prepare.py` builds the windows and the split once. It stops if a patient or a recording falls in two splits.
