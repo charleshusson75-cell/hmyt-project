@@ -4,8 +4,8 @@
   project list, under its old working title "ECG DNN adapted to EEG study". The study no longer adapts an ECG
   network, so the title changed.
 - **Team:** N42, one member (student ID 20260147S)
-- **Main models:** mean-vote baseline and LightGBM (baselines), TabPFN, MiniRocket, 1D CNN (results in `gd4-baseline-model`)
-- **Key result:** patient-disjoint split checked by `assert`; results in `gd4-baseline-model`
+- **Main models:** mean-vote baseline and LightGBM (baselines), TabPFN, MiniRocket, 1D CNN
+- **Key result:** test KL on windows with ≥ 10 votes, all 14,215 training recordings: LightGBM 0.813, MiniRocket 0.641, 1D CNN 0.638 (mean-vote baseline 0.975); read `report/M2_preprocessing_and_baselines.md` for how solid this is
 
 ## Question
 
@@ -32,7 +32,9 @@ the weekly reports went on the class Drive (copies of weeks 4 to 7 in `slides/`)
 
 - `report/`: Lab 1 report (`N42_Lab1_Report.docx`), literature matrix (`literature_matrix.md`, also as `.xlsx`), `references.bib`, Milestone 2 report (`M2_preprocessing_and_baselines.md`)
 - `src/eda/`: EDA notebook and the data module it used (with outputs on Kaggle: https://www.kaggle.com/code/charleshusson/hms-eda-ipynb)
-- `src/`: data preparation and split (`hms_data.py`, `prepare.py`)
+- `src/`: data preparation and split, scoring, one-run script, models, curve notebook, analysis scripts (`src/README.md`)
+- `results/`: all 87 runs, tables and figures (`results/README.md`)
+- `docs/reproducibility_checklist.md`: the course checklist, filled in
 - `slides/`: weekly reports
 - `docs/ai_disclosure_log.md`: how AI tools were used
 
@@ -50,3 +52,11 @@ python src/prepare.py --comp <folder of the HMS competition> --out prepared
 ```
 
 `prepare.py` builds the windows and the split once. It stops if a patient or a recording falls in two splits.
+
+```bash
+python src/run.py --model lgbm --n 1000 --seed 0 --data prepared --out new_results
+```
+
+One run = one model, one N, one seed; the model names are the files in `src/models/`. The full curve is
+`src/notebooks/hms_curve.ipynb` on a Kaggle GPU (attach the competition and a dataset holding `src/`, Internet on):
+every model, size and seed, then the tables and figures. Seeds are fixed, and the test set is the same in all 87 runs.
