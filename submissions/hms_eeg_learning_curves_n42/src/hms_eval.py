@@ -156,11 +156,14 @@ def summarise(out_dir, metric=None):
 # the line style says what the model reads: raw signal, spectrogram, or band-power features
 STYLE = {'lgbm': ('LightGBM', '#2a78d6', 'o', 'features'),
          'cnn1d': ('1D CNN (ResNet)', '#eb6834', 's', 'signal'),
+         'cnn1d_ft': ('1D CNN + fine-tuning (>= 10 votes)', '#a33a0e', 's', 'signal'),
          'xresnet1d': ('CNN (xresnet1d, v1)', '#eb6834', 's', 'signal'),
          'minirocket': ('MiniRocket', '#1baf7a', 'D', 'signal'),
-         'tabpfn': ('TabPFN', '#eda100', '^', 'features')}
+         'logreg_both': ('Logistic regression, MiniRocket + band power', '#0b5d42', 'P', 'both'),
+         'tabpfn': ('TabPFN', '#eda100', '^', 'features'),
+         'logreg_band': ('Logistic regression, band power', '#6250d6', 'v', 'features')}
 INPUT_STYLE = {'signal': ('-', 'raw signal'), 'spectrogram': ('--', 'spectrogram'),
-               'features': (':', 'band-power features')}
+               'features': (':', 'band-power features'), 'both': ('-.', 'raw signal + band power')}
 _EXTRA = ['#e87ba4', '#008300', '#6250d6', '#e34948']          # next models, in order of appearance
 _INK, _MUTED, _GRID = '#1f1f1e', '#6b6a63', '#e6e5e0'
 
@@ -205,9 +208,9 @@ def _spread(y, gap):
     return out
 
 
-def plot_curve(out_dir, ax=None, metric=None):
+def plot_curve(out_dir, ax=None, metric=None, models=None, title=None):
     """Learning curves: mean test KL over seeds, band = ±1 SD, the baseline dashed grey, colour = model,
-    line style = input (raw signal / spectrogram / band power)."""
+    line style = input (raw signal / spectrogram / band power). models: only these (default: all)."""
     import matplotlib.pyplot as plt
     from matplotlib.lines import Line2D
     d = load_results(out_dir)
@@ -221,6 +224,7 @@ def plot_curve(out_dir, ax=None, metric=None):
         ax.plot(fl.index, fl.values, color=_MUTED, lw=1.3, ls=(0, (6, 3)))
         ends.append((fl.index[-1] * 1.08, fl.values[-1], 'mean-vote baseline', _MUTED))
     st, used = _style(_models(d)), set()
+    st = {k: v for k, v in st.items() if models is None or k in models}
     for mod, (label, c, mk, inp) in st.items():
         g = d[d.model == mod].groupby('n_train')[m]
         mu, sd = g.mean(), g.std().fillna(0)
@@ -243,7 +247,7 @@ def plot_curve(out_dir, ax=None, metric=None):
     ax.minorticks_off()
     ax.set_xlabel('training recordings N (log scale)')
     ax.set_ylabel('test KL divergence (lower is better)')
-    ax.set_title('%s: mean over seeds, band = ±1 SD' % ('high-quality test windows (>= 10 votes)'
+    ax.set_title(title or '%s: mean over seeds, band = ±1 SD' % ('high-quality test windows (>= 10 votes)'
                  if m == PRIMARY else m), fontsize=9, color=_INK, loc='left')
     leg1 = ax.legend(frameon=False, fontsize=8, loc='lower left', title='model', title_fontsize=8)
     ax.add_artist(leg1)
@@ -349,4 +353,28 @@ def paired_table(out_dir, pairs=None, which='hq', B=2000):
             rows.append(dict(pair='%s - %s' % (a, b), N=int(n), mean_delta=round(float(g.delta.mean()), 4),
                              first_better=int(((g.p < 0.05) & (g.delta < 0)).sum()),
                              second_better=int(((g.p < 0.05) & (g.delta > 0)).sum()), seeds=len(g)))
+    return pd.DataFrame(rows)
+
+
+def paired_pooled(out_dir, pairs, which='hq', B=4000, seed=1):
+    """For each pair (a, b) and each N: KL of a minus KL of b on the same test windows, each model's KL first
+    averaged over the seeds both models have; 95% interval by resampling test patients. Negative = a better;
+    `significant` when the interval excludes 0. One interval per N, with the seed-to-seed variation averaged out."""
+    import pandas as pd
+    Y, pats, hq, prim, _ = _test_arrays(out_dir)
+    mask = hq if which == 'hq' else prim
+    d = load_results(out_dir)
+    rows = []
+    for a, b in pairs:
+        for n in sorted(d.n_train.unique()):
+            seeds = sorted(set(d[(d.model == a) & (d.n_train == n)].seed) & set(d[(d.model == b) & (d.n_train == n)].seed))
+            if not seeds:
+                continue
+            k = {m: np.mean([kl_per_sample(Y, np.load(os.path.join(out_dir, 'preds', '%s_n%d_s%d_test.npy' % (m, n, s))))
+                             for s in seeds], 0) for m in (a, b)}
+            diff = (k[a] - k[b])[mask]
+            lo, hi = np.percentile(cluster_bootstrap(diff, pats[mask], B, seed), [2.5, 97.5])
+            rows.append(dict(pair='%s - %s' % (a, b), N=int(n), delta=round(float(diff.mean()), 4),
+                             ci95_lo=round(float(lo), 4), ci95_hi=round(float(hi), 4),
+                             significant=bool(lo > 0 or hi < 0), seeds=len(seeds)))
     return pd.DataFrame(rows)

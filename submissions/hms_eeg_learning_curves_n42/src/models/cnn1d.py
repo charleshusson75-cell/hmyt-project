@@ -4,8 +4,8 @@ Architecture: the "bag of tricks" ResNet (xresnet: three-convolution stem, avera
 shortcuts, last batch-norm of each block initialised at zero) in its 1D form, as in the PTB-XL
 benchmark of Strodthoff et al. (2021): kernel size 5, concat pooling (average + max), a hidden
 layer of 128 units with batch-norm and dropout. Depth 18 ([2, 2, 2, 2] blocks), the standard
-small configuration. Training: the shared recipe of models/deep.py, learning rate chosen on the
-validation set.
+small configuration. Training: the shared recipe of models/deep.py (recipe 2: length and patience
+in gradient steps), learning rate chosen on the validation set. cnn1d_ft.py adds a fine-tuning stage.
 
 This replaces v1's TensorFlow CNN, whose sampling rate (100 Hz) and recipe came from the ECG work.
 """

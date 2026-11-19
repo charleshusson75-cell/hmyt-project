@@ -15,7 +15,8 @@ The head is a multinomial logistic regression trained on the vote shares (soft c
 same objective as the other models), with L2 strength 1/C chosen on the high-quality validation
 windows. It runs in PyTorch (L-BFGS, full batch, GPU if any) and minimises exactly the objective of
 scikit-learn's LogisticRegression on vote-weighted rows (checked by tests/test_minirocket.py); in
-v1, the scikit-learn version on Kaggle's CPU took ~95% of MiniRocket's time.
+v1, the scikit-learn version on Kaggle's CPU took ~95% of MiniRocket's time. The same head
+(select_head) also serves logreg_band.py and logreg_both.py, so the three differ only by their input.
 """
 import time, warnings
 from itertools import combinations
@@ -166,8 +167,16 @@ def head_proba(W, b, F, batch=4096):
 
 
 # ----------------------------------------------------------------------------- model
-def fit_predict(split, seed=0, n_features=10_000, Cs=CS, max_iter=500):
-    from hms_eval import kl_per_sample
+def standardise(tr, *others):
+    """Each feature centred and scaled with the TRAINING windows' mean and SD."""
+    mu, sd = tr.mean(0), tr.std(0)
+    sd[sd < 1e-6] = 1.0
+    return [(a - mu) / sd for a in (tr,) + others]
+
+
+def features(split, seed=0, n_features=10_000):
+    """MiniRocket features of the training, validation and test windows, standardised with training
+    statistics only. Returns (Ftr, Fva, Fte, params, transform seconds)."""
     t0 = time.time()
     to_nct = lambda a: np.ascontiguousarray(np.transpose(np.asarray(a, np.float32), (0, 2, 1)))
     Xtr, Xva, Xte = to_nct(split.X_train), to_nct(split.X_val), to_nct(split.X_test)
@@ -175,14 +184,19 @@ def fit_predict(split, seed=0, n_features=10_000, Cs=CS, max_iter=500):
     Ftr, Fva, Fte = (transform(a, params) for a in (Xtr, Xva, Xte))
     del Xtr, Xva, Xte                                # ~1 GB at full N, no longer needed
     t_transform = time.time() - t0
-    mu, sd = Ftr.mean(0), Ftr.std(0)                 # standardise with training statistics only
-    sd[sd < 1e-6] = 1.0
-    Ftr, Fva, Fte = ((a - mu) / sd for a in (Ftr, Fva, Fte))
+    Ftr, Fva, Fte = standardise(Ftr, Fva, Fte)
+    return Ftr, Fva, Fte, params, round(t_transform, 1)
 
+
+def select_head(Ftr, Fva, Fte, split, Cs=CS, max_iter=500):
+    """The logistic-regression head for each C (strongest regularisation first, warm-started); keeps the C
+    with the lowest KL on the high-quality validation windows. Shared by minirocket, logreg_band and
+    logreg_both, so these three differ only by their input. Returns (val_proba, test_proba, info)."""
+    from hms_eval import kl_per_sample
     kl = lambda Y, Q: float(kl_per_sample(Y, Q).mean())
     sel = getattr(split, 'val_hq', np.ones(len(split.Y_val), bool))
     best, val_kl, init = None, {}, None
-    for C in Cs:                                     # strongest regularisation first, warm-started
+    for C in Cs:
         W, b, n_iter = fit_head(Ftr, split.Y_train, C, init=init, max_iter=max_iter)
         init = (W, b)
         pv = head_proba(W, b, Fva)
@@ -191,7 +205,12 @@ def fit_predict(split, seed=0, n_features=10_000, Cs=CS, max_iter=500):
             best = (C, val_kl[C], pv, head_proba(W, b, Fte), n_iter)
     C, _, pv, pt, n_iter = best
     import torch
-    return pv, pt, dict(n_features=int(Ftr.shape[1]), dilations=[int(d) for d in params['dilations']],
-                        C=C, val_kl_per_C={str(c): v for c, v in val_kl.items()}, n_iter=n_iter,
-                        transform_seconds=round(t_transform, 1),
-                        device='cuda' if torch.cuda.is_available() else 'cpu', torch=torch.__version__)
+    return pv, pt, dict(n_features=int(Ftr.shape[1]), C=C, val_kl_per_C={str(c): v for c, v in val_kl.items()},
+                        n_iter=n_iter, device='cuda' if torch.cuda.is_available() else 'cpu', torch=torch.__version__)
+
+
+def fit_predict(split, seed=0, n_features=10_000, Cs=CS, max_iter=500):
+    Ftr, Fva, Fte, params, t_transform = features(split, seed, n_features)
+    pv, pt, info = select_head(Ftr, Fva, Fte, split, Cs, max_iter)
+    info.update(dilations=[int(d) for d in params['dilations']], transform_seconds=t_transform)
+    return pv, pt, info

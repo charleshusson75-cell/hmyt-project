@@ -281,7 +281,7 @@ def make_split(data, n_train, seed, signals=True, clip=20.0, stat_windows=2000):
         n_patients_train=int(meta['patient_id'].iloc[tr].nunique()),
         Y_train=Y[tr], Y_val=Y[va], Y_test=Y[te],
         F_train=data.F[xrow[tr]], F_val=data.F[xrow[va]], F_test=data.F[xrow[te]],
-        val_primary=prim[va], val_hq=hq[va], test_primary=prim[te], test_hq=hq[te],
+        val_primary=prim[va], val_hq=hq[va], test_primary=prim[te], test_hq=hq[te], hq_train=hq[tr],
         ids_test=meta['eeg_id'].to_numpy()[te], subids_test=meta['eeg_sub_id'].to_numpy()[te],
         patients_test=meta['patient_id'].to_numpy()[te], patients_val=meta['patient_id'].to_numpy()[va],
         total_votes_test=meta['total_votes'].to_numpy()[te],
