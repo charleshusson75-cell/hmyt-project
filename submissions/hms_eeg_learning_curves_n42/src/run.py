@@ -3,6 +3,7 @@
     python run.py --model cnn1d --n 1000 --seed 0 --data <prepared dir> --out results
     python run.py --model floor --n all  --seed 0 --data <prepared dir> --out results
     python run.py --model cnn1d --n 100  --seed 1 --data <prepared dir> --kw lr=0.003
+    python run.py --model lgbm  --n 1000 --seed 0 --fold 3 --data <prepared dir> --out results/cv/fold_3
 
 --skip-existing makes a loop resumable: runs whose result file exists are not redone.
 
@@ -29,6 +30,7 @@ def main(argv=None):
     ap.add_argument('--model', required=True, help='a file in models/, e.g. xresnet or floor')
     ap.add_argument('--n', required=True, help='number of training windows, or "all"')
     ap.add_argument('--seed', type=int, default=0)
+    ap.add_argument('--fold', type=int, default=0, help='patient fold used as test set (0 = main split; 1-9 for cross-validation)')
     ap.add_argument('--data', required=True, help='folder written by prepare.py')
     ap.add_argument('--out', default='results')
     ap.add_argument('--kw', action='append', default=[], help='model argument key=value (repeatable)')
@@ -43,7 +45,7 @@ def main(argv=None):
     kw = {k: _value(v) for k, v in (s.split('=', 1) for s in a.kw)}
     n = None if a.n == 'all' else int(a.n)
     data = hms_data.load(a.data)
-    pool = int((data.meta['split'] == 'train').sum())
+    pool = int(((hms_data.fold_split(data.meta, a.fold) == 'train') & data.meta['is_primary'].to_numpy()).sum())
     n_eff = pool if n is None or n >= pool else n
     tag = '%s_n%d_s%d' % (model.NAME, n_eff, a.seed)
     if n_eff > getattr(model, 'MAX_N', n_eff):     # e.g. TabPFN: pretrained for up to 10,000 samples
@@ -52,7 +54,7 @@ def main(argv=None):
     if a.skip_existing and os.path.exists(os.path.join(a.out, tag + '.json')):
         print('skip (already done):', tag, flush=True)
         return None
-    split = hms_data.make_split(data, n, a.seed, signals=(model.INPUT == 'signal'))
+    split = hms_data.make_split(data, n, a.seed, signals=(model.INPUT == 'signal'), test_fold=a.fold)
     t0 = time.time()
     val_p, test_p, info = model.fit_predict(split, seed=a.seed, **kw)
     info['seconds'] = round(time.time() - t0, 1)

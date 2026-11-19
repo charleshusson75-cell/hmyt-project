@@ -159,6 +159,17 @@ def assign_split(meta, n_folds=10, seed=0, test_fold=0, val_fold=1):
     return out
 
 
+N_FOLDS = 10
+
+
+def fold_split(meta, test_fold=0):
+    """Split label of every window when patient fold `test_fold` is the test set and the next fold the
+    validation set; the 8 others are the training pool. test_fold=0 is the split stored by prepare()
+    (fold 0 test, fold 1 validation). Rotating test_fold over 0..9 tests every patient exactly once."""
+    f = meta['fold'].to_numpy()
+    return np.where(f == test_fold, 'test', np.where(f == (test_fold + 1) % N_FOLDS, 'val', 'train'))
+
+
 def check_disjoint(meta):
     """No patient and no recording in two splits: train, val and test are independent."""
     for key in ('patient_id', 'eeg_id'):
@@ -264,20 +275,24 @@ def subsample(pool, n, seed):
     return np.sort(np.random.default_rng(seed).permutation(pool)[:int(n)])
 
 
-def make_split(data, n_train, seed, signals=True, clip=20.0, stat_windows=2000):
+def make_split(data, n_train, seed, signals=True, clip=20.0, stat_windows=2000, test_fold=0):
     """Everything a model receives. Y_* are the soft targets (vote proportions).
     Train: the primary windows of N training recordings. Val and test: primary windows plus
     high-quality windows; masks *_primary and *_hq say which. X_* (n, time, channels) are
-    standardised per channel (median/IQR) using the TRAINING windows only."""
+    standardised per channel (median/IQR) using the TRAINING windows only.
+    test_fold: which patient fold is the test set (0 = the main split; see fold_split)."""
     meta = data.meta
-    split, prim = meta['split'].to_numpy(), meta['is_primary'].to_numpy()
+    split, prim = fold_split(meta, test_fold), meta['is_primary'].to_numpy()
     hq = meta['total_votes'].to_numpy() >= HQ_VOTES
     tr = subsample(np.flatnonzero(prim & (split == 'train')), n_train, seed)
     va = np.flatnonzero((split == 'val') & (prim | hq))
     te = np.flatnonzero((split == 'test') & (prim | hq))
+    pid = meta['patient_id'].to_numpy()
+    p_tr, p_va, p_te = set(pid[split == 'train']), set(pid[va]), set(pid[te])
+    assert p_tr.isdisjoint(p_te) and p_tr.isdisjoint(p_va) and p_va.isdisjoint(p_te), "a patient is in two sets"
     Y, xrow = soft_targets(meta), meta['xrow'].to_numpy()
     s = SimpleNamespace(
-        n_train=len(tr), seed=seed, rows_train=tr, rows_val=va, rows_test=te,
+        n_train=len(tr), seed=seed, test_fold=int(test_fold), rows_train=tr, rows_val=va, rows_test=te,
         n_patients_train=int(meta['patient_id'].iloc[tr].nunique()),
         Y_train=Y[tr], Y_val=Y[va], Y_test=Y[te],
         F_train=data.F[xrow[tr]], F_val=data.F[xrow[va]], F_test=data.F[xrow[te]],

@@ -19,6 +19,9 @@ about 45 gradient steps at N = 100, before the CNN even reached the mean-vote ba
   only if the validation KL improves. Same recordings and windows: only the weighting of the labels changes.
 - Reproducibility: seeded data order and initialisation, deterministic cuDNN kernels. v1's
   TensorFlow CNN differed by up to 0.12 KL between two GPU runs with the same seed.
+- Predictions (19 November 2026): a window whose float16 logits overflow is predicted again in float32
+  (`fp32_rows` in info counts them). No run finished before that date had such a window, so its results
+  do not change; the likely cause of 4 CNN runs failing on every attempt (decision D-56).
 """
 import copy, math, os, time
 import numpy as np
@@ -50,7 +53,26 @@ def seed_everything(seed):
     torch.use_deterministic_algorithms(True, warn_only=True)
 
 
-def _predict(net, X, device, batch=256):
+def _predict(net, X, device, batch=256, stats=None):
+    """Class probabilities. On the GPU the forward pass runs in float16; a window whose logits overflow
+    float16 (probabilities NaN) is computed again in float32, so one extreme window cannot void a run.
+    Rows that were already finite are unchanged. stats (a dict), if given, counts the recomputed rows."""
+    import torch
+    p = _predict16(net, X, device, batch)
+    bad = ~np.isfinite(p).all(1)
+    if bad.any():
+        idx = np.flatnonzero(bad)
+        with torch.no_grad():
+            for i in range(0, len(idx), batch):
+                j = idx[i:i + batch]
+                x = torch.as_tensor(X[j], device=device)
+                p[j] = torch.softmax(net(x).float(), 1).double().cpu().numpy()
+        if stats is not None:
+            stats['fp32_rows'] = stats.get('fp32_rows', 0) + int(bad.sum())
+    return p
+
+
+def _predict16(net, X, device, batch=256):
     import torch
     net.eval()
     out = []
@@ -154,7 +176,8 @@ def train_predict(net, split, seed=0, lr=1e-3, max_steps=None, patience_steps=PA
                         ft_best_step=h2['best_step'], ft_improved=h2['best_step'] > 0,
                         ft_eval_steps=h2['step'], ft_val_kl_per_eval=h2['val_kl'], val_kl_after_ft=round(kl2, 5))
     net.load_state_dict(state)
-    val_p, test_p = _predict(net, Xva, device), _predict(net, Xte, device)
+    st = {}
+    val_p, test_p = _predict(net, Xva, device, stats=st), _predict(net, Xte, device, stats=st)
     info.update(params=int(sum(p.numel() for p in net.parameters())), train_seconds=round(time.time() - t0, 1),
-                device=device, torch=torch.__version__, deterministic=True)
+                device=device, torch=torch.__version__, deterministic=True, fp32_rows=st.get('fp32_rows', 0))
     return val_p, test_p, info

@@ -26,7 +26,8 @@ def expand_votes(F, Y):
     return F[rows], cls, Y[rows, cls]
 
 
-def fit_predict(split, seed=0, **params):
+def fit(split, seed=0, **params):
+    """The classifier, trees added until the high-quality validation log-loss stops improving. Returns (clf, params)."""
     import lightgbm as lgb
     p = dict(PARAMS, random_state=seed)
     p.update(params)
@@ -38,12 +39,20 @@ def fit_predict(split, seed=0, **params):
         warnings.filterwarnings('ignore', message=".*'eval_set' is deprecated.*")
         clf.fit(Xe, ye, sample_weight=we, eval_set=[(Xv, yv)], eval_sample_weight=[wv],
                 callbacks=[lgb.early_stopping(100, verbose=False)])
+    return clf, p
 
-    def proba(F):                       # columns of classes absent from training stay at 0
-        out = np.zeros((len(F), split.Y_train.shape[1]))
-        out[:, clf.classes_.astype(int)] = clf.predict_proba(F)
-        return out
 
-    return proba(split.F_val), proba(split.F_test), dict(
+def proba(clf, F, n_classes=6):
+    """Probabilities for the 6 classes; columns of classes absent from training stay at 0."""
+    out = np.zeros((len(F), n_classes))
+    out[:, clf.classes_.astype(int)] = clf.predict_proba(F)
+    return out
+
+
+def fit_predict(split, seed=0, **params):
+    import lightgbm as lgb
+    clf, p = fit(split, seed, **params)
+    k = split.Y_train.shape[1]
+    return proba(clf, split.F_val, k), proba(clf, split.F_test, k), dict(
         best_iteration=int(clf.best_iteration_ or p['n_estimators']), params=p,
         lightgbm=lgb.__version__)

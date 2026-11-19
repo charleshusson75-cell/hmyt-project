@@ -75,6 +75,7 @@ def score(split, val_p, test_p):
     kv = kl_per_sample(split.Y_val, val_p)
     return dict(
         n_train=int(split.n_train), n_patients_train=int(split.n_patients_train), seed=int(split.seed),
+        test_fold=int(getattr(split, 'test_fold', 0)),
         test_kl_hq=round(kl_hq, 5), test_kl_hq_ci95=[round(lo_hq, 5), round(hi_hq, 5)],
         test_kl_all=round(kl_all, 5), test_kl_all_ci95=[round(lo_all, 5), round(hi_all, 5)],
         test_kl_all_lowvotes=round(float(k[low].mean()), 5) if low.any() else None,
@@ -378,3 +379,169 @@ def paired_pooled(out_dir, pairs, which='hq', B=4000, seed=1):
                              ci95_lo=round(float(lo), 4), ci95_hi=round(float(hi), 4),
                              significant=bool(lo > 0 or hi < 0), seeds=len(seeds)))
     return pd.DataFrame(rows)
+
+
+# ------------------------------------------------------------------------------- cross-validation over patient folds
+# Fold 0 is the main results folder; folds 1-9 are written by `run.py --fold k --out <root>/cv/fold_k`.
+# Pooled over the folds, every patient is tested once, by models that never saw it. One seed per fold.
+SIZES = (100, 300, 1000, 3000, 10000, 'all')
+
+
+def cv_folders(root):
+    """[(fold, folder)] for the folds that have results: fold 0 = root, fold k = root/cv/fold_k."""
+    cands = [(0, root)] + [(k, os.path.join(root, 'cv', 'fold_%d' % k)) for k in range(1, 10)]
+    return [(k, d) for k, d in cands if os.path.exists(os.path.join(d, 'preds', 'hq_test.npy'))]
+
+
+def _size(n):
+    return n if n in SIZES else 'all'                # the whole training pool: its size differs by fold
+
+
+def cv_collect(root, seed=0):
+    """Test windows of every available fold, stacked, with each model's predictions for each training size.
+    Returns a namespace: Y, patients, hq, primary, votes, fold (one row per window), pool {fold: size of 'all'},
+    P {(model, size): (n, 6) array, NaN rows where that fold has no such run}."""
+    from types import SimpleNamespace
+    folds = cv_folders(root)
+    arrays, runs, start = [], [], 0
+    pool = {}
+    for k, d in folds:
+        Y, pats, hq, prim, tv = _test_arrays(d)
+        arrays.append((Y, pats, hq, prim, tv, np.full(len(Y), k)))
+        r = load_results(d)
+        r = r[r.seed == seed]
+        for _, row in r.iterrows():
+            runs.append((k, d, row.model, int(row.n_train), start, len(Y)))
+        big = [int(n) for n in r.n_train.unique() if _size(int(n)) == 'all']
+        if big:
+            pool[k] = max(big)
+        start += len(Y)
+    Y, pats, hq, prim, tv, fold = (np.concatenate(a) for a in zip(*arrays))
+    P = {}
+    for k, d, m, n, s0, length in runs:
+        key = (m, _size(n))
+        if key not in P:
+            P[key] = np.full((start, Y.shape[1]), np.nan)
+        P[key][s0:s0 + length] = np.load(os.path.join(d, 'preds', '%s_n%d_s%d_test.npy' % (m, n, seed)))
+    return SimpleNamespace(Y=Y, patients=pats, hq=hq, primary=prim, votes=tv, fold=fold, pool=pool, P=P,
+                           folds=[k for k, _ in folds])
+
+
+def cv_table(root, which='hq', B=2000, seed=0, c=None):
+    """Pooled test KL per model and size over every available fold, with a 95% interval by resampling patients.
+    Returns (long table, wide text table 'mean [low, high]')."""
+    import pandas as pd
+    c = c or cv_collect(root, seed)
+    mask = c.hq if which == 'hq' else c.primary
+    rows = []
+    for (m, size), P in c.P.items():
+        ok = mask & ~np.isnan(P[:, 0])
+        if not ok.any():
+            continue
+        k = kl_per_sample(c.Y[ok], P[ok])
+        lo, hi = np.percentile(cluster_bootstrap(k, c.patients[ok], B), [2.5, 97.5])
+        rows.append(dict(model=m, N=size, kl=round(float(k.mean()), 4), ci95_lo=round(float(lo), 4),
+                         ci95_hi=round(float(hi), 4), folds=len(set(c.fold[ok])), windows=int(ok.sum()),
+                         patients=len(set(c.patients[ok]))))
+    long = pd.DataFrame(rows)
+    order = [s for s in SIZES if s in set(long.N)]
+    cols = (['floor'] if 'floor' in set(long.model) else []) + [m for m in _models(long)]
+    wide = pd.DataFrame({m: ['%.3f [%.3f, %.3f]' % tuple(long[(long.model == m) & (long.N == s)][['kl', 'ci95_lo', 'ci95_hi']].iloc[0])
+                             if ((long.model == m) & (long.N == s)).any() else '-' for s in order] for m in cols},
+                        index=pd.Index(order, name='N'))
+    return long, wide
+
+
+def cv_paired(root, pairs, which='hq', B=4000, seed=0, c=None):
+    """Model a minus model b, pooled over the folds where both ran, per training size. Negative = a better.
+    95% interval by resampling test patients; `significant` when it excludes 0."""
+    import pandas as pd
+    c = c or cv_collect(root, seed)
+    mask = c.hq if which == 'hq' else c.primary
+    rows = []
+    for a, b in pairs:
+        for size in SIZES:
+            if (a, size) not in c.P or (b, size) not in c.P:
+                continue
+            Pa, Pb = c.P[(a, size)], c.P[(b, size)]
+            ok = mask & ~np.isnan(Pa[:, 0]) & ~np.isnan(Pb[:, 0])
+            if not ok.any():
+                continue
+            diff = kl_per_sample(c.Y[ok], Pa[ok]) - kl_per_sample(c.Y[ok], Pb[ok])
+            lo, hi = np.percentile(cluster_bootstrap(diff, c.patients[ok], B, 1), [2.5, 97.5])
+            rows.append(dict(pair='%s - %s' % (a, b), N=size, delta=round(float(diff.mean()), 4),
+                             ci95_lo=round(float(lo), 4), ci95_hi=round(float(hi), 4),
+                             significant=bool(lo > 0 or hi < 0), folds=len(set(c.fold[ok])),
+                             patients=len(set(c.patients[ok]))))
+    return pd.DataFrame(rows)
+
+
+def cv_by_fold(root, models, size='all', which='hq', seed=0, c=None):
+    """Mean test KL of each model in each fold, for one training size: how much the conclusions depend on
+    which patients happen to be in the test set."""
+    import pandas as pd
+    c = c or cv_collect(root, seed)
+    mask = c.hq if which == 'hq' else c.primary
+    out = {}
+    for m in models:
+        P = c.P.get((m, size))
+        if P is None:
+            continue
+        out[m] = {k: round(float(kl_per_sample(c.Y[(c.fold == k) & mask], P[(c.fold == k) & mask]).mean()), 3)
+                  for k in c.folds if not np.isnan(P[(c.fold == k) & mask][:, 0]).any() and ((c.fold == k) & mask).any()}
+    t = pd.DataFrame(out)
+    t.index.name = 'test fold'
+    t['patients (hq)'] = [len(set(c.patients[(c.fold == k) & c.hq])) for k in t.index]
+    return t
+
+
+def cv_plot(root, models=None, which='hq', title=None, ax=None, B=2000, seed=0, c=None):
+    """Learning curves pooled over the folds: mean test KL, band = 95% interval over test patients
+    (not the seed SD of plot_curve). 'all' is drawn at the mean size of the folds' training pools."""
+    import matplotlib.pyplot as plt
+    from matplotlib.lines import Line2D
+    c = c or cv_collect(root, seed)
+    long, _ = cv_table(root, which, B, seed, c)
+    xall = float(np.mean(list(c.pool.values()))) if c.pool else 15000.0
+    x_of = lambda s: xall if s == 'all' else float(s)
+    ax = ax or plt.subplots(figsize=(7.6, 4.8))[1]
+    ax.grid(True, axis='y', color=_GRID, lw=0.8)
+    ax.set_axisbelow(True)
+    ends = []
+    fl = long[long.model == 'floor'].assign(x=lambda t: t.N.map(x_of)).sort_values('x')
+    if len(fl):
+        ax.plot(fl.x, fl.kl, color=_MUTED, lw=1.3, ls=(0, (6, 3)))
+        ends.append((fl.x.iloc[-1] * 1.08, fl.kl.iloc[-1], 'mean-vote baseline', _MUTED))
+    st, used = _style(_models(long)), set()
+    st = {k: v for k, v in st.items() if models is None or k in models}
+    for mod, (label, col, mk, inp) in st.items():
+        g = long[long.model == mod].assign(x=lambda t: t.N.map(x_of)).sort_values('x')
+        used.add(inp)
+        ax.fill_between(g.x, g.ci95_lo, g.ci95_hi, color=col, alpha=0.13, lw=0)
+        ax.plot(g.x, g.kl, color=col, lw=2, ls=INPUT_STYLE[inp][0], marker=mk, ms=6, mec='white', mew=1.2, label=label)
+        ends.append((g.x.iloc[-1] * 1.08, g.kl.iloc[-1], label, _INK))
+    lo, hi = ax.get_ylim()
+    for (x, _, text, cl), y in zip(ends, _spread([e[1] for e in ends], 0.04 * (hi - lo))):
+        ax.text(x, y, text, color=cl, va='center', fontsize=8)
+    xs = [x_of(s) for s in SIZES if s in set(long.N)]
+    labels = ['%gk' % round(x / 1000, 1) if x >= 1000 else str(int(x)) for x in xs]
+    if 'all' in set(long.N):
+        labels[-1] = '\nall (~%.1fk)' % (xall / 1000)
+    ax.set_xscale('log')
+    ax.set_xlim(xs[0] * 0.8, xs[-1] * 3.5)
+    ax.set_xticks(xs)
+    ax.set_xticklabels(labels)
+    ax.minorticks_off()
+    ax.set_xlabel('training recordings N (log scale)')
+    ax.set_ylabel('test KL divergence (lower is better)')
+    n_pat = len(set(c.patients[c.hq])) if which == 'hq' else len(set(c.patients[c.primary]))
+    ax.set_title(title or '%d test folds pooled (%s patients): mean, band = 95%% interval over patients'
+                 % (len(c.folds), format(n_pat, ',')), fontsize=9, color=_INK, loc='left')
+    leg1 = ax.legend(frameon=False, fontsize=8, loc='lower left', title='model', title_fontsize=8)
+    ax.add_artist(leg1)
+    proxies = [Line2D([], [], color=_INK, lw=1.6, ls=INPUT_STYLE[i][0]) for i in INPUT_STYLE if i in used]
+    ax.legend(proxies, [INPUT_STYLE[i][1] for i in INPUT_STYLE if i in used], frameon=False, fontsize=8,
+              loc='upper right', title='input', title_fontsize=8)
+    for side in ('top', 'right'):
+        ax.spines[side].set_visible(False)
+    return ax
