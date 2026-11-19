@@ -4,13 +4,21 @@
   project list, under its old working title "ECG DNN adapted to EEG study". The study no longer adapts an ECG
   network, so the title changed.
 - **Team:** N42, one member (student ID 20260147S)
-- **Main models:** mean-vote baseline and LightGBM (baselines), TabPFN, MiniRocket, 1D CNN
-- **Key result:** test KL on windows with ≥ 10 votes, all 14,215 training recordings: LightGBM 0.813, MiniRocket 0.641, 1D CNN 0.638 (mean-vote baseline 0.975); read `report/M2_preprocessing_and_baselines.md` for how solid this is
+- **Final paper:** `report/N42_final_paper.pdf` (also `.docx`); **slides:** `slides/final_report_N42.pptx`
+- **Models:** mean-vote baseline; logistic regression (LR) and LightGBM on 160 band-power features; TabPFN (pretrained,
+  same features); MiniRocket; LR on MiniRocket + band power; 1D CNN (xresnet1d-18), with and without fine-tuning on
+  the windows with ≥ 10 votes
+- **Key result** (test KL on the 16,255 windows with ≥ 10 votes of 1,053 patients, 10-fold cross-validation; lower is
+  better): with 100 training recordings the LR on band power is best (0.906; baseline 1.054); from 300 to 3,000 the
+  LR on MiniRocket + band power leads without a significant margin; from 10,000 the fine-tuned CNN is clearly best
+  (0.566 vs 0.685, paired difference −0.119, 95% CI −0.161 to −0.080), but without fine-tuning it only ties the best
+  feature model.
 
 ## Question
 
-How does each family of models improve as the number of labelled EEG recordings grows? One frozen split by patient,
-the same training recordings for every model, N = 100, 300, 1,000, 3,000, 10,000 and all, 3 seeds.
+How many labelled recordings does each model family need? Every model is trained on the same nested subsets of
+training recordings (N = 100, 300, 1,000, 3,000, 10,000 and all, about 13,700) and scored on the same patients.
+Patients are split once into 10 folds; each fold is the test set in turn, so every patient is tested once.
 
 ## Branches
 
@@ -20,23 +28,30 @@ the same training recordings for every model, N = 100, 300, 1,000, 3,000, 10,000
 | `gd2-dataset-eda` | M1 | EDA notebook and its figures |
 | `gd3-preprocessing` | M2 | Protocol v2 preprocessing, patient-disjoint split, leakage audit |
 | `gd4-baseline-model` | M2 | Baselines, first model comparison, results of all 87 runs |
+| `gd5-proposed-model` | M3 | Progress test 2; training recipe 2, CNN + fine-tuning, same-learner LR models (ablation of the input), results of the recipe-2 run |
+| `gd6-evaluation-xai` | M4 | 10-fold cross-validation, clinical metrics with intervals, calibration, error analysis, explainability; final results |
+| `gd7-ieee-paper` | Final | IEEE-style paper, final slides, final README and checklist |
+| `submit/hms_eeg_learning_curves-n42` | Final | Same content as `gd7-ieee-paper`: the branch of the Pull Request |
 
-Each branch starts from the previous one, so `gd4-baseline-model` holds everything. As the course's AI guide
-asks, milestones are reviewed here in the fork; the only Pull Request comes with the final paper.
+Each branch starts from the previous one, so `gd7-ieee-paper` holds everything. As the course's AI guide asks,
+milestones were reviewed in the fork and the only Pull Request comes with the final paper.
 
-Everything was put in this repository on 31 October 2026, when I set up the GitHub process for this midterm
-submission, so all commits carry that date. The work itself was done earlier: Lab 1 went in on Teams in mid-October and
-the weekly reports went on the class Drive (copies of weeks 4 to 7 in `slides/`).
+The repository was set up on 31 October 2026 for the midterm, so the commits of `gd1`–`gd4` carry that date although the
+work was done earlier (Lab 1 on Teams in mid-October, weekly reports on the class Drive, copies in `slides/`). The M3 and
+M4 code and results were committed on 19 November 2026 with the final paper; the code is the version that produced the
+committed results (Kaggle runs of 17–19 November).
 
 ## Folder
 
-- `report/`: Lab 1 report (`N42_Lab1_Report.docx`), literature matrix (`literature_matrix.md`, also as `.xlsx`), `references.bib`, Milestone 2 report (`M2_preprocessing_and_baselines.md`)
-- `src/eda/`: EDA notebook and the data module it used (with outputs on Kaggle: https://www.kaggle.com/code/charleshusson/hms-eda-ipynb)
-- `src/`: data preparation and split, scoring, one-run script, models, curve notebook, analysis scripts (`src/README.md`)
-- `results/`: all 87 runs, tables and figures (`results/README.md`)
-- `docs/reproducibility_checklist.md`: the course checklist, filled in
-- `slides/`: weekly reports
-- `docs/ai_disclosure_log.md`: how AI tools were used
+- `report/`: final paper (`N42_final_paper.pdf`, `.docx`), Lab 1 report, literature matrix (`.md`, `.xlsx`),
+  `references.bib`, Milestone 2 report, progress test 2 (`kiem_tra_lan_2.md`)
+- `src/`: data preparation and split, scoring, metrics, explainability, run scripts, models, curve notebook, tests,
+  analysis scripts (`src/README.md`)
+- `results/`: `final_cv/` (the final results: 560 runs over 10 folds, tables, figures and the scripts behind every number
+  of the paper), `m3_recipe2/` (recipe-2 run, 17 November), and at the top level the 87 runs of the Milestone 2 report
+  (`results/README.md`)
+- `slides/`: weekly reports (weeks 4–7) and the final presentation
+- `docs/reproducibility_checklist.md`: the course checklist, filled in; `docs/ai_disclosure_log.md`: how AI tools were used
 
 ## Data
 
@@ -51,12 +66,31 @@ pip install -r requirements.txt
 python src/prepare.py --comp <folder of the HMS competition> --out prepared
 ```
 
-`prepare.py` builds the windows and the split once. It stops if a patient or a recording falls in two splits.
+`prepare.py` builds the windows and the 10 patient folds once. It stops if a patient or a recording falls in two splits.
 
 ```bash
 python src/run.py --model lgbm --n 1000 --seed 0 --data prepared --out new_results
+python src/run.py --model lgbm --n 1000 --seed 0 --fold 3 --data prepared --out new_results/cv/fold_3
 ```
 
-One run = one model, one N, one seed; the model names are the files in `src/models/`. The full curve is
-`src/notebooks/hms_curve.ipynb` on a Kaggle GPU (attach the competition and a dataset holding `src/`, Internet on):
-every model, size and seed, then the tables and figures. Seeds are fixed, and the test set is the same in all 87 runs.
+One run = one model, one N, one seed, one test fold (`--fold`, 0 by default); the model names are the files in
+`src/models/`. The full study is `src/notebooks/hms_curve.ipynb` on a Kaggle GPU (attach the competition and a dataset
+holding `src/`, Internet on): fold 0 with 3 seeds, folds 1–9 with seed 0 (`FOLDS`, over two sessions), then the pooled
+tables, the clinical metrics and, with `RUN_XAI = True`, the explanations (`src/xai_run.py`). Seeds are fixed and the
+CNN runs deterministically: 69 runs repeated three weeks apart gave identical predictions.
+
+Every number and figure of the paper, from the result files:
+
+```bash
+python results/final_cv/analysis/report_numbers.py results/final_cv src
+python results/final_cv/analysis/report_figures.py results/final_cv src
+```
+
+They need the prediction files (`preds/`, written by `run.py`), which are not committed (size); the tables they wrote are
+committed next to them.
+
+## Known limitations
+
+One dataset (no external validation); 10 s windows while the experts saw 50 s and spectrograms; seed variation and the
+CNN learning rate from fold 0 only; fine-tuning given to the CNN only; 4 of 564 runs (all CNN) failed in every session and
+are missing (`results/final_cv/README.md`). Section V-D of the paper lists them all.

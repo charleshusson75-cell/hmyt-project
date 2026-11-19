@@ -1,4 +1,11 @@
-# Learning curves, protocol v2 (Kaggle run of 23 October 2026, step A)
+# Results
+
+- **`final_cv/`: the final results** (10-fold cross-validation, 560 runs, Milestone 4 metrics, explanations, and the
+  scripts behind every number and figure of the final paper). Start there: `final_cv/README.md`.
+- `m3_recipe2/`: the run of 17 November after the recipe fix (fold 0, 3 seeds, 140 runs).
+- This folder's top level: the 87 runs of 23 October used in the Milestone 2 report (described below).
+
+## Learning curves, protocol v2 (Kaggle run of 23 October 2026, step A)
 
 All 87 runs come from one Kaggle GPU session of `hms_curve.ipynb` (protocol v2): baseline, LightGBM, CNN
 and MiniRocket at N = 100, 300, 1,000, 3,000, 10,000 and 14,215 (all training recordings), 3 seeds; TabPFN
