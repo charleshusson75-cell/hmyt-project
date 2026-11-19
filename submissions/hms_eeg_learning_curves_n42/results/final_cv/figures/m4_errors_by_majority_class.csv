@@ -1,0 +1,7 @@
+majority class,mean KL,windows
+gpd,0.537,2875
+grda,0.449,1879
+lpd,0.89,3120
+lrda,0.758,1481
+other,0.387,5102
+seizure,0.754,336

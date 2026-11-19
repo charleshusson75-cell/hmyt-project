@@ -1,0 +1,57 @@
+{
+ "model": "tabpfn",
+ "tag": "tabpfn_n10000_s0",
+ "time": "2026-11-17T23:06:14",
+ "n_train": 10000,
+ "n_patients_train": 1459,
+ "seed": 0,
+ "test_fold": 2,
+ "test_kl_hq": 0.70681,
+ "test_kl_hq_ci95": [
+  0.60836,
+  0.88046
+ ],
+ "test_kl_all": 0.8601,
+ "test_kl_all_ci95": [
+  0.74951,
+  0.98536
+ ],
+ "test_kl_all_lowvotes": 0.92579,
+ "floor_test_kl_hq": 1.18292,
+ "floor_test_kl_all": 1.33221,
+ "beats_floor": true,
+ "val_kl_hq": 0.66126,
+ "val_kl_all": 0.94657,
+ "test_auc_macro": 0.8595,
+ "test_auc_per_class": {
+  "seizure": 0.9077,
+  "lpd": 0.7771,
+  "gpd": 0.9034,
+  "lrda": 0.8359,
+  "grda": 0.8721,
+  "other": 0.8607
+ },
+ "test_acc_consensus": 0.4581,
+ "n_test_hq": 1980,
+ "n_test_all": 1826,
+ "n_test_hq_patients": 117,
+ "n_val": 2900,
+ "n_test": 3207,
+ "primary_metric": "test_kl_hq",
+ "test_ids_hash": "441b15ccbf7e",
+ "info": {
+  "draws": 4,
+  "members_per_draw": 2,
+  "classes_missing_per_draw": [
+   0,
+   0,
+   0,
+   0
+  ],
+  "prior_mix": 0.0001,
+  "device": "cuda",
+  "tabpfn": "2.1.3",
+  "seconds_tabpfn": 475.5,
+  "seconds": 478.3
+ }
+}

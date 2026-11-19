@@ -1,0 +1,19 @@
+N,best,folds won
+100,lgbm,1
+100,logreg_band,7
+100,logreg_both,1
+100,tabpfn,1
+300,cnn1d,1
+300,lgbm,1
+300,logreg_band,3
+300,logreg_both,3
+300,tabpfn,2
+1000,logreg_both,7
+1000,tabpfn,3
+3000,cnn1d_ft,4
+3000,lgbm,1
+3000,logreg_both,4
+3000,tabpfn,1
+10000,cnn1d_ft,10
+all,cnn1d_ft,8
+all,logreg_both,2

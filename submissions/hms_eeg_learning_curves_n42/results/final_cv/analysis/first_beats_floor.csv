@@ -1,0 +1,8 @@
+model,first_N_better_than_baseline,worse_than_baseline_at
+logreg_band,100,
+lgbm,100,
+tabpfn,100,
+minirocket,100,
+logreg_both,100,
+cnn1d,1000,100
+cnn1d_ft,1000,100

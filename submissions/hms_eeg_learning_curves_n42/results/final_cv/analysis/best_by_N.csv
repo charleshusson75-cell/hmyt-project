@@ -1,0 +1,7 @@
+N,best,kl,runner_up,kl_runner_up,delta,lo,hi,significant,folds
+100,logreg_band,0.9059,lgbm,0.9456,-0.0397,-0.0816,-0.0043,True,10
+300,logreg_both,0.8632,logreg_band,0.8678,-0.0046,-0.035,0.0286,False,10
+1000,logreg_both,0.7798,tabpfn,0.7955,-0.0157,-0.0552,0.0283,False,10
+3000,logreg_both,0.744,cnn1d_ft,0.751,-0.007,-0.0603,0.0486,False,9
+10000,cnn1d_ft,0.566,logreg_both,0.685,-0.119,-0.161,-0.0804,True,10
+all,cnn1d_ft,0.5756,cnn1d,0.6628,-0.0872,-0.1176,-0.0626,True,9

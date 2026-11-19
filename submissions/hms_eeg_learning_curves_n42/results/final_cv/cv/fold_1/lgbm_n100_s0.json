@@ -1,0 +1,59 @@
+{
+ "model": "lgbm",
+ "tag": "lgbm_n100_s0",
+ "time": "2026-11-17T21:20:28",
+ "n_train": 100,
+ "n_patients_train": 84,
+ "seed": 0,
+ "test_fold": 1,
+ "test_kl_hq": 0.90465,
+ "test_kl_hq_ci95": [
+  0.72006,
+  1.10894
+ ],
+ "test_kl_all": 1.18073,
+ "test_kl_all_ci95": [
+  1.0747,
+  1.32201
+ ],
+ "test_kl_all_lowvotes": 1.40484,
+ "floor_test_kl_hq": 0.91805,
+ "floor_test_kl_all": 1.17084,
+ "beats_floor": true,
+ "val_kl_hq": 0.97573,
+ "val_kl_all": 1.21233,
+ "test_auc_macro": 0.6678,
+ "test_auc_per_class": {
+  "seizure": 0.7052,
+  "lpd": 0.6792,
+  "gpd": 0.7784,
+  "lrda": 0.5062,
+  "grda": 0.7699,
+  "other": 0.5681
+ },
+ "test_acc_consensus": 0.3844,
+ "n_test_hq": 1462,
+ "n_test_all": 1310,
+ "n_test_hq_patients": 106,
+ "n_val": 3207,
+ "n_test": 2277,
+ "primary_metric": "test_kl_hq",
+ "test_ids_hash": "d03f335e8b75",
+ "info": {
+  "best_iteration": 80,
+  "params": {
+   "learning_rate": 0.05,
+   "num_leaves": 15,
+   "min_child_samples": 10,
+   "subsample": 0.8,
+   "subsample_freq": 1,
+   "colsample_bytree": 0.8,
+   "reg_lambda": 1.0,
+   "n_estimators": 2000,
+   "verbose": -1,
+   "random_state": 0
+  },
+  "lightgbm": "4.6.0",
+  "seconds": 2.6
+ }
+}

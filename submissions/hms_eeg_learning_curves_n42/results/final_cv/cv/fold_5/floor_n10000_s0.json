@@ -1,0 +1,53 @@
+{
+ "model": "floor",
+ "tag": "floor_n10000_s0",
+ "time": "2026-11-18T02:31:13",
+ "n_train": 10000,
+ "n_patients_train": 1466,
+ "seed": 0,
+ "test_fold": 5,
+ "test_kl_hq": 0.94787,
+ "test_kl_hq_ci95": [
+  0.8519,
+  1.07233
+ ],
+ "test_kl_all": 1.29787,
+ "test_kl_all_ci95": [
+  1.18442,
+  1.42936
+ ],
+ "test_kl_all_lowvotes": 1.45259,
+ "floor_test_kl_hq": 0.94787,
+ "floor_test_kl_all": 1.29787,
+ "beats_floor": false,
+ "val_kl_hq": 1.1354,
+ "val_kl_all": 1.30145,
+ "test_auc_macro": 0.5,
+ "test_auc_per_class": {
+  "seizure": 0.5,
+  "lpd": 0.5,
+  "gpd": 0.5,
+  "lrda": 0.5,
+  "grda": 0.5,
+  "other": 0.5
+ },
+ "test_acc_consensus": 0.4242,
+ "n_test_hq": 1464,
+ "n_test_all": 1755,
+ "n_test_hq_patients": 96,
+ "n_val": 2838,
+ "n_test": 2751,
+ "primary_metric": "test_kl_hq",
+ "test_ids_hash": "d61b67def9e8",
+ "info": {
+  "prior": [
+   0.1583,
+   0.1465,
+   0.0985,
+   0.0611,
+   0.1159,
+   0.4197
+  ],
+  "seconds": 0.0
+ }
+}

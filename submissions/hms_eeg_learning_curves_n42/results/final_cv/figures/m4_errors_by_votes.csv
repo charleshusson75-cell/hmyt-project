@@ -1,0 +1,6 @@
+votes (one window per recording),mean KL,windows
+1,0.582,3049
+2,0.842,1625
+3-5,1.342,5962
+6-9,0.831,101
+>=10,0.533,5042

@@ -1,0 +1,13 @@
+kind,eeg_id,eeg_sub_id,votes,experts,experts_share,model,model_prob,gradcam_class,experts_shares,model_probs
+correct,591314234,10,16,seizure,0.938,seizure,0.882,seizure,seizure 0.94 other 0.06,seizure 0.88 gpd 0.06 other 0.05
+correct,541995778,6,15,lpd,0.933,lpd,0.814,lpd,seizure 0.07 lpd 0.93,lpd 0.81 other 0.09
+correct,1381708494,2,13,gpd,1.0,gpd,0.961,gpd,gpd 1.00,gpd 0.96
+correct,3525185677,263,15,lrda,0.867,lrda,0.329,lrda,lpd 0.13 lrda 0.87,seizure 0.06 lpd 0.18 lrda 0.33 grda 0.22 other 0.17
+correct,1555719464,1,13,grda,0.846,grda,0.619,grda,grda 0.85 other 0.15,lrda 0.06 grda 0.62 other 0.27
+correct,686526886,0,11,other,1.0,other,0.985,other,other 1.00,other 0.98
+error,3945687482,1,15,seizure,1.0,other,0.713,other,seizure 1.00,seizure 0.15 lpd 0.07 other 0.71
+error,3448085209,3,13,other,0.846,seizure,0.697,seizure,gpd 0.08 grda 0.08 other 0.85,seizure 0.70 gpd 0.16 other 0.06
+error,611406267,5,16,lrda,0.625,other,0.846,other,lrda 0.62 other 0.38,other 0.85
+error,235218950,4,16,grda,0.5,other,0.971,other,lrda 0.19 grda 0.50 other 0.31,other 0.97
+error,114620689,5,15,lpd,1.0,other,0.713,other,lpd 1.00,seizure 0.06 gpd 0.06 grda 0.07 other 0.71
+error,3525185677,196,15,lrda,0.867,grda,0.454,grda,lpd 0.13 lrda 0.87,lrda 0.18 grda 0.45 other 0.25

@@ -1,0 +1,58 @@
+{
+ "model": "logreg_band",
+ "tag": "logreg_band_n13301_s0",
+ "time": "2026-11-18T01:43:03",
+ "n_train": 13301,
+ "n_patients_train": 1556,
+ "seed": 0,
+ "test_fold": 4,
+ "test_kl_hq": 0.93947,
+ "test_kl_hq_ci95": [
+  0.71196,
+  1.08068
+ ],
+ "test_kl_all": 1.11534,
+ "test_kl_all_ci95": [
+  0.9211,
+  1.30056
+ ],
+ "test_kl_all_lowvotes": 1.2087,
+ "floor_test_kl_hq": 1.08691,
+ "floor_test_kl_all": 1.30198,
+ "beats_floor": true,
+ "val_kl_hq": 0.7886,
+ "val_kl_all": 1.07882,
+ "test_auc_macro": 0.6971,
+ "test_auc_per_class": {
+  "seizure": 0.5727,
+  "lpd": 0.6225,
+  "gpd": 0.9049,
+  "lrda": 0.6634,
+  "grda": 0.8246,
+  "other": 0.5947
+ },
+ "test_acc_consensus": 0.2858,
+ "n_test_hq": 1627,
+ "n_test_all": 2033,
+ "n_test_hq_patients": 90,
+ "n_val": 2751,
+ "n_test": 3114,
+ "primary_metric": "test_kl_hq",
+ "test_ids_hash": "e3ebde9b04b9",
+ "info": {
+  "n_features": 160,
+  "C": 0.001,
+  "val_kl_per_C": {
+   "0.0001": 0.82069,
+   "0.001": 0.7886,
+   "0.01": 0.80728,
+   "0.1": 0.83316,
+   "1.0": 0.84973
+  },
+  "n_iter": 37,
+  "device": "cuda",
+  "torch": "2.11.0+cu128",
+  "features": "band power (160)",
+  "seconds": 5.9
+ }
+}

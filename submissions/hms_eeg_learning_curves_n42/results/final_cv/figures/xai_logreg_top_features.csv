@@ -1,0 +1,6 @@
+seizure,lpd,gpd,lrda,grda,other
+log_alpha_T4-T6 (+0.02),log_beta_P3-O1 (+0.02),rel_theta_Fp1-F3 (+0.06),rel_alpha_P4-O2 (+0.02),rel_delta_F4-C4 (+0.02),log_gamma_P4-O2 (+0.02)
+log_beta_T5-O1 (+0.02),log_beta_C3-P3 (+0.02),rel_theta_Fp2-F4 (+0.06),rel_alpha_T4-T6 (+0.01),log_delta_F4-C4 (+0.02),rel_gamma_C3-P3 (+0.02)
+log_gamma_T5-O1 (+0.02),rel_delta_C3-P3 (+0.02),rel_theta_Fp1-F7 (+0.06),log_delta_F3-C3 (+0.01),rel_delta_F3-C3 (+0.02),rel_beta_F3-C3 (+0.02)
+rel_alpha_F8-T4 (+0.02),log_alpha_C4-P4 (+0.02),rel_theta_F7-T3 (+0.05),rel_delta_P3-O1 (+0.01),rel_delta_P4-O2 (+0.02),rel_beta_T6-O2 (+0.02)
+log_beta_T4-T6 (+0.02),log_alpha_T5-O1 (+0.02),rel_theta_F8-T4 (+0.05),rel_delta_F3-C3 (+0.01),rel_delta_T4-T6 (+0.02),rel_beta_Fp1-F3 (+0.02)
