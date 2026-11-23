@@ -1,4 +1,8 @@
-"""HMS data: preparation (run once), loading, and one training split per (N, seed).
+"""FIRST-PROTOCOL MODULE, USED ONLY BY THE LAB 1 EDA NOTEBOOK (hms_eda.ipynb, next to this file): 100 Hz,
+0.5-45 Hz. Replaced on 23 October 2026 by ../hms_data.py (protocol v2: 200 Hz, 0.3-75 Hz), which produced every
+final result. Kept so that the Lab 1 notebook can still be run; do not use it for anything else.
+
+HMS data: preparation (run once), loading, and one training split per (N, seed).
 
     prepare(comp_dir, out_dir)        parquet -> X.npy, F.npy, meta.csv, prep_config.json
     data  = load(out_dir)             data.X, data.F, data.meta

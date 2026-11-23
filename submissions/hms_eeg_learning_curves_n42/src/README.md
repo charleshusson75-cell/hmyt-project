@@ -16,4 +16,5 @@ One model, one training size, one seed per run. A learning curve is a loop over 
 - `tests/test_minirocket.py`: MiniRocket transform against aeon, PyTorch head against scikit-learn
 - `analysis/`: robustness and label analyses on a finished run. They need `results/preds/`, which `run.py` writes and which
   is not committed, and `HMS_TRAIN_CSV` set to the competition's `train.csv`.
-- `eda/`: the Lab 1 data analysis, with the first-protocol data module it used
+- `eda/`: the Lab 1 data analysis only, with the first-protocol data module it imports (`eda/hms_data.py`: 100 Hz,
+  0.5-45 Hz). Not used by any final result: those use `hms_data.py` above (200 Hz, 0.3-75 Hz)

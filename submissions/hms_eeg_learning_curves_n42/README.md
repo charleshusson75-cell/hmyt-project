@@ -93,4 +93,21 @@ committed next to them.
 
 One dataset (no external validation); 10 s windows while the experts saw 50 s and spectrograms; seed variation and the
 CNN learning rate from fold 0 only; fine-tuning given to the CNN only; 4 of 564 runs (all CNN) failed in every session and
-are missing (`results/final_cv/README.md`). Section V-D of the paper lists them all.
+are missing (`results/final_cv/README.md`); TabPFN was not run with all training recordings (it is pretrained for at most
+10,000 training samples, `src/models/tabpfn.py`, `MAX_N`), so its curve stops at N = 10,000 and it is not in the
+Milestone 4 table (`m4_common.csv`, all recordings). Section V-D of the paper lists them all.
+
+## Which numbers come from which table
+
+A model's KL at a training size (`results/final_cv/analysis/kl_table.csv`, paper Table II) uses every fold where that
+model ran. Paired differences use only the folds where both models ran, and `best_by_N.csv` ranks the models on the
+windows that every model has at that size (`kl_table_common.csv`). The two differ only where a run failed: at N = 3,000
+the LR on MiniRocket + band power scores 0.732 over 10 folds (`kl_table.csv`) and 0.744 over the 9 folds it shares with
+the fine-tuned CNN (`best_by_N.csv`).
+
+## Preprocessing: Lab 1 vs final results
+
+Every final result uses protocol v2 (`src/hms_data.py`, `PREP_VERSION = 2`): 200 Hz, 60 Hz notch, 0.3–75 Hz band-pass.
+Lab 1 (October) used the first protocol, 100 Hz and 0.5–45 Hz, which was replaced on 23 October 2026.
+`src/eda/hms_data.py` is that first-protocol module, kept only because the Lab 1 EDA notebook (`src/eda/hms_eda.ipynb`)
+imports it; no result of the final paper uses it.

@@ -36,6 +36,12 @@ the new `failures.txt` logging). Affected cells are pooled over 9 folds; paired 
 | 10,000 | CNN + fine-tuning (0.566) | −0.119 [−0.161, −0.080] vs LR, MiniRocket + band | 10/10 |
 | all | CNN + fine-tuning (0.576, 9 folds) | −0.087 [−0.118, −0.063] vs CNN | 8/9 |
 
+The KL of the best model is from `kl_table.csv` (every fold where it ran); the paired difference uses only the folds
+where both models ran. They differ only where a run failed: at 3,000 the LR on MiniRocket + band power scores 0.732 over
+10 folds and 0.744 over the 9 folds shared with the CNN + fine-tuning (`best_by_N.csv`, `kl_table_common.csv`).
+TabPFN has no row with all recordings: it was not run there (pretrained for at most 10,000 training samples), so it is
+also absent from the Milestone 4 tables (`m4_common*.csv`).
+
 - CNN from scratch: worse than the mean-vote baseline at N = 100 (1.265 vs 1.054), beats it from 1,000.
 - Same learner (LR): band power better than MiniRocket features at 100 (−0.054), worse from 1,000 (+0.05 to +0.13);
   both inputs together slightly better than MiniRocket alone (significant at 5 of 6 sizes).
